@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brain-Viz | Human Connectome Analytics</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+
+<!-- ═══ LANDING ═══════════════════════════════════════════════════════════ -->
+<div id="landing">
+  <div class="landing-bg"></div>
+  <div class="landing-content">
+    <div class="landing-logo">Brain<span>Viz</span></div>
+    <div class="landing-tagline">Human Connectome Analytics Platform</div>
+    <div class="landing-cards">
+      <div class="landing-card">
+        <div class="landing-card-icon">🧠</div>
+        <div class="landing-card-title">Visualize Dataset</div>
+        <div class="landing-card-desc">Explore a single brain connectome in 3D spatial and 2D topological views. Find pathways, filter networks, inspect hub regions.</div>
+        <button class="btn landing-btn" id="landing-btn-single">Load &amp; Explore →</button>
+        <input type="file" id="file-single" accept=".json" style="display:none">
+        <div class="landing-hint">Accepts connectome.json produced by process_hcp.py</div>
+      </div>
+      <div class="landing-or">or</div>
+      <div class="landing-card">
+        <div class="landing-card-icon">⚖</div>
+        <div class="landing-card-title">Compare Two Datasets</div>
+        <div class="landing-card-desc">Load a healthy and a disease-affected connectome side-by-side. Get structural diff highlights and AI-generated clinical insights.</div>
+        <button class="btn landing-btn landing-btn-compare" id="landing-btn-compare">Compare Datasets →</button>
+        <input type="file" id="file-compare" accept=".json" multiple style="display:none">
+        <div class="landing-hint">
+          <span class="diff-dot" style="background:#00E676"></span>Only in A &nbsp;
+          <span class="diff-dot" style="background:#FF5252"></span>Only in B &nbsp;
+          <span class="diff-dot" style="background:#AAAAAA"></span>Shared
+        </div>
+      </div>
+    </div>
+    <div class="landing-footer">All processing happens locally — no data leaves your browser</div>
+  </div>
+</div>
+
+<!-- ═══ COMPARE PAGE ══════════════════════════════════════════════════════ -->
+<div id="compare-page" style="display:none;">
+  <div id="compare-header">
+    <button class="btn btn-sm" id="btn-back-to-app">← Back to Viewer</button>
+    <div class="compare-title-group">
+      <span class="compare-page-title">⚖ Structural Connectivity Comparison</span>
+      <div class="compare-ds-row">
+        <span class="compare-ds-badge badge-a" id="cmp-label-a">Dataset A</span>
+        <span class="compare-vs">vs.</span>
+        <span class="compare-ds-badge badge-b" id="cmp-label-b">Dataset B</span>
+      </div>
+    </div>
+    <div class="compare-legend-row">
+      <span><span class="diff-dot" style="background:#00E676"></span>Only A: <strong id="cmp-count-a">0</strong></span>
+      <span><span class="diff-dot" style="background:#FF5252"></span>Only B: <strong id="cmp-count-b">0</strong></span>
+      <span><span class="diff-dot" style="background:#AAAAAA"></span>Shared: <strong id="cmp-count-s">0</strong></span>
+    </div>
+    <button class="btn btn-sm btn-upload" id="btn-swap-compare">⇄ Swap A / B</button>
+    <button class="btn btn-sm btn-insights" id="btn-show-insights">💡 Insights</button>
+  </div>
+
+  <div id="compare-body">
+    <!-- Left: Dataset A -->
+    <div class="compare-col">
+      <div class="compare-col-head compare-col-head-a">
+        <span id="cmp-name-a">Dataset A</span>
+        <span class="compare-col-meta" id="cmp-meta-a"></span>
+      </div>
+      <div id="compare-view-a" class="compare-canvas"></div>
+    </div>
+    <div class="compare-divider"></div>
+    <!-- Right: Dataset B -->
+    <div class="compare-col">
+      <div class="compare-col-head compare-col-head-b">
+        <span id="cmp-name-b">Dataset B</span>
+        <span class="compare-col-meta" id="cmp-meta-b"></span>
+      </div>
+      <div id="compare-view-b" class="compare-canvas"></div>
+    </div>
+
+    <!-- Insights panel (right drawer, hidden by default) -->
+    <div id="insights-panel" style="display:none;">
+      <div class="insights-header">
+        <span class="insights-title">💡 Clinical Insights</span>
+        <button class="rip-close" id="btn-close-insights">✕</button>
+      </div>
+      <div id="insights-body"></div>
+    </div>
+  </div>
+
+  <!-- Hover info bar at bottom -->
+  <div id="compare-hover-bar">
+    <span id="cmp-hover-a" class="cmp-hover-chip cmp-hover-a">Hover a node in A</span>
+    <span id="cmp-hover-link">↔</span>
+    <span id="cmp-hover-b" class="cmp-hover-chip cmp-hover-b">Hover a node in B</span>
+  </div>
+
+  <div id="compare-diff-bar">
+    <div class="diff-stat diff-stat-a">
+      <span class="diff-stat-num" id="cmp-pct-a">—</span>
+      <span class="diff-stat-lbl">edges unique to A</span>
+    </div>
+    <div class="diff-stat diff-stat-s">
+      <span class="diff-stat-num" id="cmp-pct-s">—</span>
+      <span class="diff-stat-lbl">shared edges</span>
+    </div>
+    <div class="diff-stat diff-stat-b">
+      <span class="diff-stat-num" id="cmp-pct-b">—</span>
+      <span class="diff-stat-lbl">edges unique to B</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MAIN APP ══════════════════════════════════════════════════════════ -->
+<div id="app" style="display:none;">
+
+  <header id="header">
+    <div class="header-brand">
+      <div class="brand-dot"></div>
+      <span>Brain-Viz</span>
+      <span class="brand-sub">Connectome Analytics</span>
+    </div>
+    <div class="header-stats">
+      <div class="stat-chip"><span class="val" id="stat-nodes">0</span><span class="lbl">Nodes</span></div>
+      <div class="stat-chip"><span class="val" id="stat-edges">0</span><span class="lbl">Edges</span></div>
+      <div class="stat-chip"><span class="val" id="stat-comms">0</span><span class="lbl">Networks</span></div>
+      <div class="stat-chip"><span class="val" id="stat-density">0</span><span class="lbl">Density</span></div>
+    </div>
+    <div class="header-actions">
+      <span id="stat-visible">—</span>
+      <button class="btn btn-sm btn-icon" id="btn-darkmode" title="Toggle dark mode">◑</button>
+      <button class="btn btn-sm" id="btn-export">⬇ PNG</button>
+      <button class="btn btn-sm btn-upload" id="btn-upload">📂 Load Dataset</button>
+      <input type="file" id="file-input" accept=".json" multiple style="display:none">
+    </div>
+  </header>
+
+  <div id="dataset-bar" style="display:none;">
+    <span class="dataset-bar-label">Datasets:</span>
+    <div id="dataset-tabs"></div>
+    <button class="btn btn-sm btn-compare" id="btn-open-compare" style="display:none">⚖ Full Compare</button>
+  </div>
+
+  <div id="main">
+    <!-- ══ Sidebar ══════════════════════════════════════════════════════════ -->
+    <aside id="sidebar">
+      <div class="search-box">
+        <input type="text" id="region-search" placeholder="🔍  Search region…" autocomplete="off" spellcheck="false">
+        <div id="search-results"></div>
+      </div>
+
+      <!-- Connectivity filters -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Connectivity Filters</span>
+          <!-- Clear all filters button -->
+          <button class="btn btn-sm btn-clear-filters" id="btn-clear-filters" title="Reset all filters">✕ Clear</button>
+        </div>
+        <div class="panel-body">
+          <span class="label-xs">Edge Weight Threshold</span>
+          <div class="slider-row">
+            <input type="range" id="weight-slider" min="0" max="1" step="0.01" value="0.0">
+            <span class="slider-val" id="weight-val">0.00</span>
+          </div>
+          <div class="section-sep" style="margin:10px 0;"></div>
+          <span class="label-xs">Hemisphere</span>
+          <div class="btn-group">
+            <button class="btn btn-sm active" data-hemi="both">Both</button>
+            <button class="btn btn-sm" data-hemi="L">Left</button>
+            <button class="btn btn-sm" data-hemi="R">Right</button>
+          </div>
+          <div class="section-sep" style="margin:10px 0;"></div>
+          <!-- Dim opacity slider (new) -->
+          <span class="label-xs">Filtered-out opacity</span>
+          <div class="slider-row">
+            <input type="range" id="dim-slider" min="0" max="50" step="1" value="8">
+            <span class="slider-val" id="dim-val">8%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Visual mapping -->
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Visual Mapping</span></div>
+        <div class="panel-body">
+          <span class="label-xs">Node Color Scheme</span>
+          <div class="btn-group">
+            <button class="btn btn-sm active" data-color-mode="community">Network</button>
+            <button class="btn btn-sm" data-color-mode="degree">Degree</button>
+            <button class="btn btn-sm" data-color-mode="betweenness">Centrality</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Network metrics -->
+      <div class="panel">
+        <div class="panel-header"><span class="panel-title">Network Metrics</span></div>
+        <div class="panel-body">
+          <div class="metric-row">
+            <span class="metric-label">Global Eff.</span>
+            <div class="metric-bar-wrap"><div class="metric-bar" id="bar-efficiency" style="width:0%"></div></div>
+            <span class="metric-val" id="val-efficiency">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Avg Degree</span>
+            <div class="metric-bar-wrap"><div class="metric-bar" id="bar-avgdeg" style="width:0%;background:var(--net-2)"></div></div>
+            <span class="metric-val" id="val-avgdeg">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Density</span>
+            <div class="metric-bar-wrap"><div class="metric-bar" id="bar-density" style="width:0%;background:var(--net-3)"></div></div>
+            <span class="metric-val" id="val-density">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Functional Networks -->
+      <div class="panel" style="flex:1;display:flex;flex-direction:column;">
+        <div class="panel-header">
+          <span class="panel-title">Functional Networks</span>
+          <button class="btn btn-icon btn-sm" id="btn-comm-all">All</button>
+        </div>
+        <div class="panel-body" style="overflow-y:auto;flex:1;padding-top:8px;">
+          <div id="community-list"></div>
+        </div>
+      </div>
+
+      <!-- Region Info Panel — INSIDE sidebar, not floating (never covers views) -->
+      <div id="region-info-panel" style="display:none;">
+        <div class="rip-panel-inner"></div>
+      </div>
+
+    </aside>
+
+    <!-- ══ Content ══════════════════════════════════════════════════════════ -->
+    <main id="content">
+      <div id="tab-bar">
+        <button class="tab-btn" data-view="panel-3d">3D Spatial</button>
+        <button class="tab-btn active" data-view="both">Split View</button>
+        <button class="tab-btn" data-view="panel-2d">2D Topology</button>
+        <div class="tab-spacer"></div>
+        <div class="view-controls">
+          <button class="btn btn-sm" id="btn-view-front">Front</button>
+          <button class="btn btn-sm" id="btn-view-top">Top</button>
+          <button class="btn btn-sm" id="btn-view-side">Side</button>
+          <button class="btn btn-sm" id="btn-view-reset">Reset</button>
+          <button class="btn btn-sm" id="btn-autorotate">Auto-Rotate</button>
+        </div>
+      </div>
+
+      <div id="path-info">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div>
+            <div class="path-label">Shortest Structural Pathway</div>
+            <div id="path-text">Region A → Region B</div>
+            <div class="path-meta">
+              <span id="path-length">Hops: 0</span>
+              <span id="path-weight">Avg weight: 0</span>
+            </div>
+          </div>
+          <button class="btn btn-sm" id="btn-reset-path" style="background:white;border-color:#FFB703;">Clear Path</button>
+        </div>
+      </div>
+
+      <div id="views-container">
+        <div id="drop-overlay">
+          <div class="drop-inner">
+            <div class="drop-icon">🧠</div>
+            <div class="drop-text">Drop connectome.json here</div>
+            <div class="drop-sub">Supports multiple files</div>
+          </div>
+        </div>
+
+        <div id="panel-3d" class="view-panel">
+          <div class="view-label"><span class="dot" style="background:var(--accent);"></span>WebGL · Schaefer MNI</div>
+          <div id="view-3d"></div>
+        </div>
+
+        <div id="panel-2d" class="view-panel">
+          <div class="view-label" style="pointer-events:all;display:flex;align-items:center;gap:8px;">
+            <span class="dot" style="background:var(--net-3);"></span>D3.js
+            <button class="btn btn-sm" id="btn-2d-layout" style="font-size:9.5px;padding:2px 7px;">Chord</button>
+          </div>
+          <div id="view-2d"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div id="loader">
+    <div class="loader-logo">Brain<span>Viz</span></div>
+    <div class="loader-bar"><div class="loader-fill"></div></div>
+    <div id="loader-msg">Booting…</div>
+  </div>
+</div>
+
+<div id="node-tooltip"></div>
+<div id="hint-bar">Click a node to see region info · Click two nodes to find a pathway</div>
+
+<script src="js/algorithms.js"></script>
+<script src="js/store.js"></script>
+<script src="js/brain3d.js"></script>
+<script src="js/graph2d.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
