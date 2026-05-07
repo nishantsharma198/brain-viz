@@ -1,11 +1,9 @@
 /**
- * main.js — Brain-Viz Orchestrator  (full rewrite)
- *
- * New in this version:
+ * main.js — Brain-Viz Orchestrator 
  *  1. Clear all filters button (resets weight, hemisphere, all communities)
  *  2. Dim opacity slider — filtered-out nodes shown at user-controlled opacity
  *  3. Community items get .inactive class when deselected (not just opacity)
- *  4. Region info panel rendered INSIDE sidebar (never covers 2D view)
+ *  4. Region info panel rendered INSIDE sidebar
  *  5. Compare page: brushing & linking — hovering node in A highlights same ID in B
  *  6. Compare page: insights panel with per-disease clinical commentary
  *  7. Compare renderers share same shell geometry as main brain3d.js
@@ -15,7 +13,7 @@
 (function () {
 
   /* ══════════════════════════════════════════════════════════════════════
-     HELPERS  (defined first — no TDZ issues)
+     HELPERS  
   ═══════════════════════════════════════════════════════════════════════ */
   function _el(id)     { return document.getElementById(id); }
   function _set(id, v) { var e=_el(id); if(e) e.textContent=v; }
