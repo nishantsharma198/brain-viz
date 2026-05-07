@@ -1,7 +1,5 @@
 /**
  * brain3d.js  —  Brain-Viz  Three.js 3D Spatial View
- *
- * Changes in this version:
  *  - Dim rendering: filtered-out nodes/edges shown at dimOpacity instead of hidden
  *  - Separate dimNodesMesh + dimEdgesObject for clean per-group opacity
  *  - More realistic brain shell with aggressive lobe displacement
