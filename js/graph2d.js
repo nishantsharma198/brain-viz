@@ -1,10 +1,6 @@
 /**
  * graph2d.js — Brain-Viz D3.js 2D Topological View
- *
- * Upgrades integrated:
- *  - Upgrade 7: Chord diagram mode (toggle with btn-2d-layout)
- *  - Upgrade 8: Shared tooltip (tooltip also driven from brain3d screen-space,
- *               but 2D keeps its own mouseover logic for when 3D is hidden)
+ *  Chord diagram mode (toggle with btn-2d-layout)
  *  - General: dark-mode-aware SVG background reacts to CSS variable changes
  */
 
